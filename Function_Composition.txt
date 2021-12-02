@@ -1,0 +1,21 @@
+Function Composition
+Use function composition when a function must perform two or more distinct and complete operations on the consumed data. For example:
+
+A function that must sort and layout a list of images. First it must sort the complete list and then lay it out. It cannot sort and layout each image one at a time.
+A function that must advance a list of raindrops and then remove the ones that have left the screen. First it must advance all the drops and then remove the ones that have advanced too far. (With difficulty this could be done in a single pass through the list of drops, but it is much more cumbersome to do that way.)
+When using function composition the normal template for the function is discarded, and the body of the function has two or more function compositions. So in the case of arrange-images the function design would look like this:
+
+;; ListOfImage -> Image
+;; arrange images left to right in increasing order of size
+(check-expect (arrange-images (list I1 I3 I2))
+              (beside I1 I2 I3 BLANK))
+
+(define (arrange-images loi)
+  (layout-images (sort-images loi)))
+Which we read as saying "first sort the images, and then layout the sorted list". At the point this is written wish list entries would be created for layout-images and sort-images unless those functions already existed.
+
+Tests for a function that uses function composition should be selected to ensure that the function is calling all the appropriate functions and composing them properly. For example, assuming that images I1, I2 and I3 are in increasing order of size, then this test alone would not be adequate:
+
+(check-expect (arrange-images (list I1 I2 I3))
+              (beside I1 I2 I3 BLANK))
+Because a faulty implementation of arrange-images that just calls layout-images would pass. Instead a test like the original one above is needed, to ensure that both sort-images and layout-images are called. But note that the tests for arrange-images do not themselves need to fully test both composed functions. They only need to test the composition. That is why arrange-images does not absolutely have to have a base case test. (Although it wouldn't hurt it to have one.)

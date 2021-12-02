@@ -1,0 +1,75 @@
+Functions On 2 One-Of Data
+This page outlines the variations in the normal HtDF recipe when designing a function that consumes 2 data that have a one-of in their type comments. Examples of functions for which this applies include functions with the following signatures:
+
+;; ListOfString ListOfString -> Boolean
+;; ListOfString ListOfString -> ListOfString
+;; ListOfString BinaryTree -> Boolean
+;; ListOfNatural FamilyTree -> ListOfString
+For the purpose of this explanation, assume that the goal is to design a function that consumes two ListOfString and produces true if the strings in the first list are equal to the corresponding strings in the second list. If that is true and the second list is longer than the first the function should produce true; if the second list is shorter it always produces false.
+
+The first three steps of the recipe - signature, purpose and stub - are unchanged.
+
+;; ListOfString ListOfString -> Boolean
+;; produce true if lsta is a prefix of lstb
+
+(define (prefix=? lsta lstb) false)
+
+But at this point the next step is to form a cross-product of type comments table as follows. The row labels of the table are the cases of the one-of type comment for one argument (perhaps the first), and the column labels are the cases of the one-of type comment for the other argument. 
+
+;; CROSS PRODUCT OF TYPE COMMENTS TABLE
+;;
+;;                                     lstb
+;;                           empty           (cons String LOS)                
+;;                                         |
+;; l   empty                               |
+;; s                         --------------------------------
+;; t   (cons String LOS)                   |
+;; a                                       |
+
+In this case, where both arguments have 2 cases in their one-of type comments, the cross-product formed has 4 cells (2 * 2 = 4). The next step of the process is to use the cross product table to help form at least as many tests as there are cells. The upper left cell describes a scenario where both lsta and lstb are empty. The lower left cell is where lsta is non-empty but lstb is empty and so on. The lower right cell is where both lists are non-empty, and this case requires more than one test. So we end up with: 
+
+(check-expect (prefix=? empty empty) true)
+(check-expect (prefix=? empty (list "a" "b")) true)
+(check-expect (prefix=? (list "a") empty) false)
+
+(check-expect (prefix=? (list "a") (list "b")) false)
+(check-expect (prefix=? (list "a") (list "a")) true)
+(check-expect (prefix=? (list "a" "b") (list "a" "x")) false)
+(check-expect (prefix=? (list "a" "b") (list "a" "b")) true)
+We can now use the tests to help fill in the contents of the table cells, indicating what the function should do in each case.  Any cell requiring a more complex code answer, such as the lower right one in this case, need not be coded perfectly with correct syntax, but should give a good idea of what the code must do.
+;; CROSS PRODUCT OF TYPE COMMENTS TABLE
+;;
+;;                                     lstb
+;;                           empty           (cons String LOS)                
+;;                                         |
+;; l   empty                   true        |  true
+;; s                         --------------------------------
+;; t   (cons String LOS)       false       |  (and <firsts are string=?>
+;; a                                       |       <rests are prefix=?>)
+Now comes the most fun step. We look for a way to simplify the table by identifying cells that have the same answer. In this case the entire first row produces true, so we can simplify the table by combining the two cells in the first row into a single cell:
+;; CROSS PRODUCT OF TYPE COMMENTS TABLE
+;;
+;;                                     lstb
+;;                           empty           (cons String LOS)                
+;;                                         |
+;; l   empty                              true
+;; s                         --------------------------------
+;; t   (cons String LOS)       false       |  (and <firsts are string=?>
+;; a                                       |       <rests are prefix=?>)
+Now we are almost done. The next step is to code the function body directly from the table. This in effect intertwines templating with coding of details. Because the simplified table has only three cells, we know that the body of the function will be a three case cond. For the first question we always pick the largest cell, in this case the top row. The question needs to be true of the entire combined cell, so in this case the question is (empty? lsta). The answer in this case is just true.
+For the next case of the cond we pick the lower left cell. At this point, we know that the top row has been handled, so we only need a question that distinguishes the remaining cells apart. In this case (empty? lstb) distinguishes the lower left from the lower right cell. The answer in this case is false.
+In larger tables this process continues until you get to the last cell, at which point the question can be else.
+In cells that involve natural recursion, the natural recursion can be formed by applying the normal rules for handling self-reference. In this case the template for the cond answer in the third cond case is:
+              (... (first lsta)
+                   (first lstb)
+                   (prefix=? (rest lsta) ...)
+                   (prefix=? ... (rest lstb)))
+After filling that in we end up with:
+(define (prefix=? lsta lstb)
+  (cond [(empty? lsta) true]
+        [(empty? lstb) false]
+        [else
+         (and (string=? (first lsta) (first lstb))
+              (prefix=? (rest lsta)
+                        (rest lstb)))]))
+In general, when designing a function on 2 one of data it is a good idea to include the cross-product table in the design.

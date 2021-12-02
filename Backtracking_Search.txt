@@ -1,0 +1,30 @@
+Backtracking Search
+The template for backtracking is:
+
+(define (fn-for-x x)
+  (... (fn-for-lox (x-subs x))))        
+
+(define (fn-for-lox lox)
+  (cond [(empty? lox) false]
+        [else
+          (if (not (false? (fn-for-x (first lox))))  ;is first child successful?
+              (fn-for-x (first lox))                 ;if so produce that
+              (fn-for-lox (rest lox)))]))            ;or try rest of children
+
+    
+
+Note that this template incorporates the template for an n-ary tee, where the tree nodes have type x and x-subs produces the children of a tree node given the node. The backtracking works as commented above. Once we have local expressions we tend to write the backtracking search template as follows:
+
+(define (backtracking-fn x)
+  (local [(define (fn-for-x x)
+            (... (fn-for-lox (x-subs x))))
+
+          (define (fn-for-lox lox)
+            (cond [(empty? lox) false]
+                  [else
+                   (local [(define try (fn-for-x (first lox)))] ;try first child
+                     (if (not (false? try))                     ;successful?
+                         try                                    ;if so produce that
+                         (fn-for-lox (rest lox))))]))]          ;or try rest of children
+
+    (fn-for-x x)))
